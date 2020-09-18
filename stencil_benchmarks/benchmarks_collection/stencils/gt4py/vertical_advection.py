@@ -1,18 +1,17 @@
 from ..base import VerticalAdvectionStencil
 from ....tools import timing
 
+from dace.codegen.instrumentation.report import InstrumentationReport
 from gt4py import gtscript
 from .mixin import CPUStencilMixin, GPUStencilMixin
 
 
 class VerticalAdvectionStencil(VerticalAdvectionStencil):
-    @timing.return_time
     def run_stencil(self, data):
         with self.on_device(data) as device_data:
             exec_info = {}
             origin = (self.halo,) * 3
-            ccol, _, _, upos, ustage, utens, utens_stage, wcon = device_data
-            print(data.datacol.shape)
+            ustage, upos, utens, utens_stage, wcon, _, _, _ = device_data
             dtr_stage = 3.0 / 20.0
             self._gt4py_stencil_object.run(
                 utens_stage=utens_stage,
@@ -31,9 +30,9 @@ class VerticalAdvectionStencil(VerticalAdvectionStencil):
                     utens=origin,
                 ),
             )
-        return (
-            exec_info["pyext_program_end_time"] - exec_info["pyext_program_start_time"]
-        )
+        report = InstrumentationReport(exec_info["instrumentation_report"])
+        total_ms = sum(sum(v) for v in report.entries.values())
+        return total_ms / 1000
 
     @property
     def constants(self):

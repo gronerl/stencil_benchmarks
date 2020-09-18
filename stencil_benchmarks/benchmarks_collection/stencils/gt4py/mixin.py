@@ -3,12 +3,14 @@ import itertools
 
 import dace
 from gt4py.testing.utils import build_dace_adhoc
-from gt4py.testing.utils import ApplyOTFOptimizer, PrefetchingKCaches, SubgraphFusion
+from gt4py.testing.utils import ApplyOTFOptimizer,DeduplicateAccesses, PrefetchingKCaches, PruneTransientOutputs, SubgraphFusion
 from stencil_benchmarks.benchmark import Parameter, Benchmark
 
 
 class GT4PyStencilMixin(Benchmark):
 
+    use_prune_transient_outputs = Parameter("Switch pruning of transient output accesses on or off", default=True)
+    use_deduplicate_accesses = Parameter("Only access each offset once per map and field.", default=False)
     use_otf_transform = Parameter("use_otf_transform", default=True)
     use_subgraph_fusion = Parameter("use_subgraph_fusion", default=True)
     use_prefetching = Parameter("use_prefetching", default=False)
@@ -24,10 +26,14 @@ class GT4PyStencilMixin(Benchmark):
         halo = (self.halo,) * 3
         alignment = max(self.parameters["alignment"], 1)
         passes = []
+        if self.parameters["use_prune_transient_outputs"]:
+            passes.append(PruneTransientOutputs())
         if self.parameters["use_otf_transform"]:
             passes.append(ApplyOTFOptimizer())
         if self.parameters["use_subgraph_fusion"]:
             passes.append(SubgraphFusion(storage_type=dace.dtypes.StorageType.Register))
+        if self.parameters['use_deduplicate_accesses']:
+            passes.append(DeduplicateAccesses())
         if self.parameters["use_prefetching"]:
             arrays = self.parameters["prefetch_arrays"].split(",")
             passes.append(PrefetchingKCaches(arrays=arrays))
