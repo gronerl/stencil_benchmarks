@@ -24,10 +24,6 @@ class HorizontalDiffusionStencil(HorizontalDiffusionStencil):
         report = InstrumentationReport(exec_info["instrumentation_report"])
         total_ms = sum(sum(v) for v in report.entries.values())
         return total_ms / 1000
-        #         (
-        #     total_ms
-        #     / 1000  # exec_info["pyext_program_end_time"] - exec_info["pyext_program_start_time"]
-        # )
 
     @property
     def definition(self):

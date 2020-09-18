@@ -13,7 +13,6 @@ class GT4PyStencilMixin(Benchmark):
     use_subgraph_fusion = Parameter("use_subgraph_fusion", default=True)
     use_prefetching = Parameter("use_prefetching", default=False)
     prefetch_arrays = Parameter("prefetch_arryas", default="", dtype=str, nargs=1)
-
     loop_order = Parameter(
         "loop_order",
         default="IJK",
@@ -36,6 +35,10 @@ class GT4PyStencilMixin(Benchmark):
         kwargs = {}
         if "backend" in self.parameters:
             kwargs["backend"] = self.parameters["backend"]
+        if "gpu_block_size" in self.parameters:
+            kwargs["gpu_block_size"] = ",".join(
+                str(b) for b in self.parameters["gpu_block_size"]
+            )
         if hasattr(self, "constants"):
             kwargs["constants"] = self.constants
         self._gt4py_stencil_object = build_dace_adhoc(
@@ -57,6 +60,7 @@ class GPUStencilMixin(GT4PyStencilMixin):
     device = "gpu"
 
     backend = Parameter("backend", choices=["cuda", "hip"], default="cuda")
+    gpu_block_size = Parameter("GPU thread block size", default=(64, 2, 1))
 
     @contextlib.contextmanager
     def on_device(self, data):
