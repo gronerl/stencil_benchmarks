@@ -4,7 +4,9 @@ import dace
 from dace.codegen.instrumentation.report import InstrumentationReport
 from gt4py.testing.utils import (build_dace_adhoc, ApplyOTFOptimizer,
                                  DeduplicateAccesses, PrefetchingKCaches,
-                                 PruneTransientOutputs, SubgraphFusion)
+                                 PruneTransientOutputs, TileMap, MapToFor,
+                                 SubgraphFusion)
+
 from stencil_benchmarks.benchmark import Parameter, Benchmark
 
 
@@ -16,6 +18,13 @@ class StencilMixin(Benchmark):
     use_otf_transform = Parameter('apply on-the-fly transform', default=True)
     use_subgraph_fusion = Parameter('fuse subgraphs', default=True)
     use_prefetching = Parameter('apply prefetching transform', default=False)
+    tile_map = Parameter(
+        'choose dimension to tile', default='off', choices=['I', 'J', 'K', 'off']
+    )
+    tile_size = Parameter('choose tile size', default=4)
+    sequential_map = Parameter(
+        'choose map to not parallelize', default='off', choices=['I', 'J', 'K', 'off']
+    )
     prefetch_arrays = Parameter('arrays to prefetch', default='')
     device = Parameter('DaCe device to use', 'cpu', choices=['cpu', 'gpu'])
     backend = Parameter('Dace backend to use',
@@ -38,6 +47,10 @@ class StencilMixin(Benchmark):
         if self.use_subgraph_fusion:
             passes.append(
                 SubgraphFusion(storage_type=dace.dtypes.StorageType.Register))
+        if self.tile_map != 'off':
+            passes.append(TileMap(self.tile_map, self.tile_size))
+        if self.sequential_map != 'off':
+            passes.append(MapToFor(self.sequential_map))
         if self.use_deduplicate_accesses:
             passes.append(DeduplicateAccesses())
         if self.use_prefetching:
